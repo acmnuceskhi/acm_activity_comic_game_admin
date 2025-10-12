@@ -1,0 +1,97 @@
+{
+  "project_info": {
+    "project_number": "866148282057",
+    "project_id": "coder-s-cup-minigames",
+    "storage_bucket": "coder-s-cup-minigames.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:866148282057:android:734ed6c02a0b1c3a14a718",
+        "android_client_info": {
+          "package_name": "com.example.acm_activity_comic_game_admin"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "866148282057-iqhb1lmuhop9dcmneo4f6ggfv8a0t3au.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAGXXiX9M-pHN6p3spzSbnEZ6uM-2gPm5Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "866148282057-iqhb1lmuhop9dcmneo4f6ggfv8a0t3au.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:866148282057:android:78a20bd9f3a9038214a718",
+        "android_client_info": {
+          "package_name": "com.example.coders_cup_minigame_admin"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "866148282057-iqhb1lmuhop9dcmneo4f6ggfv8a0t3au.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAGXXiX9M-pHN6p3spzSbnEZ6uM-2gPm5Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "866148282057-iqhb1lmuhop9dcmneo4f6ggfv8a0t3au.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:866148282057:android:820a4a338bf3519014a718",
+        "android_client_info": {
+          "package_name": "com.example.coders_cup_minigame_frontend"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "866148282057-iqhb1lmuhop9dcmneo4f6ggfv8a0t3au.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAGXXiX9M-pHN6p3spzSbnEZ6uM-2gPm5Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "866148282057-iqhb1lmuhop9dcmneo4f6ggfv8a0t3au.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
