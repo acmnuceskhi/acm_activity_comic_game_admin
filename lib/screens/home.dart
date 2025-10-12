@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:acm_activity_comic_game_admin/screens/add_frame_page.dart';
+import 'package:acm_activity_comic_game_admin/screens/frame_page.dart';
+import 'package:acm_activity_comic_game_admin/screens/music_manager_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -19,7 +21,22 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('ACM Activity Comic Game Admin')),
+      appBar: AppBar(
+        title: const Text('ACM Activity Comic Game Admin'),
+        actions: [
+          IconButton(
+            tooltip: 'Music Manager',
+            icon: const Icon(Icons.music_note),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const MusicManagerPage(),
+                ),
+              );
+            },
+          )
+        ],
+      ),
       body: StreamBuilder<QuerySnapshot>(
         stream: _framesCollection.orderBy('index').snapshots(),
         builder: (context, snapshot) {
@@ -51,24 +68,30 @@ class _HomePageState extends State<HomePage> {
               final data = docs[index].data() as Map<String, dynamic>;
               final imageUrl = data['imageUrl'] as String? ?? '';
               final idx = data['index'] as int? ?? index;
+              final docId = docs[index].id;
 
-              return Card(
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: imageUrl.isNotEmpty
-                          ? Image.network(
-                              imageUrl,
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                            )
-                          : Container(color: Colors.grey[200]),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(6.0),
-                      child: Text('Index: $idx'),
-                    ),
-                  ],
+              return InkWell(
+                onTap: () {
+                  Navigator.of(context).push(MaterialPageRoute(builder: (_) => FramePage(frameId: docId)));
+                },
+                child: Card(
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: imageUrl.isNotEmpty
+                            ? Image.network(
+                                imageUrl,
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                              )
+                            : Container(color: Colors.grey[200]),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(6.0),
+                        child: Text('Index: $idx'),
+                      ),
+                    ],
+                  ),
                 ),
               );
             },

@@ -99,6 +99,106 @@ class StorageService {
     }
   }
 
+  /// Upload bytes for audio files under: /comic_game/music/<randomId><ext>
+  /// Returns a map with keys: 'storagePath' and 'downloadUrl'.
+  Future<Map<String, String>> uploadTempAudio({
+    required Uint8List bytes,
+    required String filename,
+    void Function(double progress)? onProgress,
+  }) async {
+    debugPrint(
+      'StorageService.uploadTempAudio: start filename=$filename bytes=${bytes.length}',
+    );
+
+    final randomId =
+        '${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}${identityHashCode(Object()).toRadixString(36)}';
+    final ext = _extensionFromFilename(filename);
+    final storagePath = 'comic_game/music/$randomId$ext';
+
+    final uploadTask = _storage.ref().child(storagePath).putData(bytes);
+
+    try {
+      final snapshot = await uploadTask;
+      final url = await snapshot.ref.getDownloadURL();
+      debugPrint(
+        'StorageService.uploadTempAudio: uploaded -> storagePath=$storagePath downloadUrl=$url',
+      );
+      return {'storagePath': storagePath, 'downloadUrl': url};
+    } catch (e, st) {
+      debugPrint(
+        'StorageService.uploadTempAudio: ERROR uploading to $storagePath -> $e\n$st',
+      );
+      rethrow;
+    }
+  }
+
+  /// Create a music document under comic_game/music/music with the provided title and audioUrl.
+  /// Stores storagePath as well so it can be cleaned up later. Uses a transaction to increment lastIndex.
+  Future<void> createMusicDoc({
+    required String title,
+    required String audioUrl,
+    required String storagePath,
+  }) async {
+    final parentDoc = _firestore.collection('comic_game').doc('music');
+    final musicCol = parentDoc.collection('music');
+    final newDocRef = musicCol.doc();
+    debugPrint(
+      'StorageService.createMusicDoc: creating music doc for title=$title audioUrl=$audioUrl',
+    );
+    try {
+      await _firestore.runTransaction((tx) async {
+        final parentSnap = await tx.get(parentDoc);
+        int lastIndex = -1;
+        if (parentSnap.exists) {
+          final data = parentSnap.data() as Map<String, dynamic>;
+          lastIndex = (data['lastIndex'] is int)
+              ? data['lastIndex'] as int
+              : int.tryParse('${data['lastIndex']}') ?? -1;
+        }
+        final nextIndex = lastIndex + 1;
+
+        debugPrint(
+          'StorageService.createMusicDoc: nextIndex=$nextIndex newDocId=${newDocRef.id}',
+        );
+
+        tx.set(newDocRef, {
+          'title': title,
+          'audioUrl': audioUrl,
+          'storagePath': storagePath,
+          'index': nextIndex,
+          'id': newDocRef.id,
+        });
+
+        tx.set(parentDoc, {'lastIndex': nextIndex}, SetOptions(merge: true));
+      });
+      debugPrint('StorageService.createMusicDoc: successfully created music doc');
+    } catch (e, st) {
+      debugPrint('StorageService.createMusicDoc: ERROR -> $e\n$st');
+      rethrow;
+    }
+  }
+
+  /// Delete a music doc and optionally its storage file (if storagePath provided).
+  Future<void> deleteMusicDoc({
+    required String docId,
+    String? storagePath,
+  }) async {
+    final parentDoc = _firestore.collection('comic_game').doc('music');
+    final musicCol = parentDoc.collection('music');
+    final docRef = musicCol.doc(docId);
+    try {
+      debugPrint('StorageService.deleteMusicDoc: deleting doc $docId');
+      await docRef.delete();
+      if (storagePath != null && storagePath.isNotEmpty) {
+        await deleteFile(storagePath);
+      }
+      debugPrint('StorageService.deleteMusicDoc: deleted doc $docId');
+    } catch (e, st) {
+      debugPrint('StorageService.deleteMusicDoc: ERROR -> $e\n$st');
+      rethrow;
+    }
+  }
+
   String _extensionFromFilename(String name) {
     final idx = name.lastIndexOf('.');
     if (idx == -1) return '';

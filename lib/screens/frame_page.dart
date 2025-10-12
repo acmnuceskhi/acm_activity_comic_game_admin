@@ -1,0 +1,210 @@
+import 'package:acm_activity_comic_game_admin/services/storage_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
+import 'package:audioplayers/audioplayers.dart';
+
+class FramePage extends StatefulWidget {
+  final String frameId;
+
+  const FramePage({super.key, required this.frameId});
+
+  @override
+  State<FramePage> createState() => _FramePageState();
+}
+
+class _FramePageState extends State<FramePage> {
+  final _framesRef = FirebaseFirestore.instance.collection('comic_game').doc('frames').collection('frames');
+  final _musicRef = FirebaseFirestore.instance.collection('comic_game').doc('music').collection('music');
+  final _storage = StorageService();
+  final _player = AudioPlayer();
+  bool _isPlaying = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _player.onPlayerComplete.listen((_) {
+      setState(() => _isPlaying = false);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Edit Frame')),
+      body: StreamBuilder<DocumentSnapshot>(
+        stream: _framesRef.doc(widget.frameId).snapshots(),
+        builder: (context, frameSnap) {
+          if (frameSnap.hasError) return Center(child: Text('Error: ${frameSnap.error}'));
+          if (!frameSnap.hasData) return const Center(child: CircularProgressIndicator());
+          final data = frameSnap.data!.data() as Map<String, dynamic>?;
+          if (data == null) return const Center(child: Text('Frame not found'));
+
+          final currentAudioUrl = data['audioUrl'] as String? ?? '';
+          final currentImageUrl = data['imageUrl'] as String? ?? '';
+
+          return Column(
+            children: [
+              if (currentImageUrl.isNotEmpty)
+                Image.network(currentImageUrl, height: 200, fit: BoxFit.cover),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.photo_camera_back),
+                    label: const Text('Change image'),
+                    onPressed: () async {
+                      final res = await FilePicker.platform.pickFiles(
+                        type: FileType.image,
+                        withData: true,
+                      );
+                      if (res == null || res.files.isEmpty) return;
+                      final f = res.files.first;
+                      final bytes = f.bytes;
+                      final name = f.name;
+                      if (bytes == null) return;
+                      // upload image and set imageUrl
+                      try {
+                        final up = await _storage.uploadTempImage(bytes: bytes, filename: name);
+                        final imageUrl = up['downloadUrl']!;
+                        final storagePath = up['storagePath']!;
+                        await _framesRef.doc(widget.frameId).set({
+                          'imageUrl': imageUrl,
+                          'imageStoragePath': storagePath,
+                        }, SetOptions(merge: true));
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Image updated')));
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Upload error: $e')));
+                      }
+                    },
+                  ),
+                ],
+              ),
+              ListTile(
+                title: const Text('Assigned music'),
+                subtitle: Text(currentAudioUrl.isNotEmpty ? currentAudioUrl : 'None'),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow),
+                      onPressed: currentAudioUrl.isEmpty
+                          ? null
+                          : () async {
+                              if (_isPlaying) {
+                                await _player.pause();
+                                setState(() => _isPlaying = false);
+                              } else {
+                                try {
+                                  await _player.play(UrlSource(currentAudioUrl));
+                                  setState(() => _isPlaying = true);
+                                } catch (e) {
+                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Play error: $e')));
+                                }
+                              }
+                            },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                child: Row(
+                  children: [
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.library_music),
+                      label: const Text('Select music'),
+                      onPressed: () => _showMusicPicker(context, currentAudioUrl),
+                    ),
+                    const SizedBox(width: 12),
+                    TextButton(
+                      onPressed: () async {
+                        // remove assigned music
+                        await _framesRef.doc(widget.frameId).set({
+                          'audioUrl': '',
+                          'audioStoragePath': '',
+                          'musicId': FieldValue.delete(),
+                        }, SetOptions(merge: true));
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Music removed')));
+                      },
+                      child: const Text('Remove assigned music'),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _showMusicPicker(BuildContext context, String currentAudioUrl) async {
+    await showDialog<void>(
+      context: context,
+      builder: (c) {
+        return AlertDialog(
+          title: const Text('Select music'),
+          content: SizedBox(
+            width: double.maxFinite,
+            height: 400,
+            child: StreamBuilder<QuerySnapshot>(
+              stream: _musicRef.orderBy('index').snapshots(),
+              builder: (context, musSnap) {
+                if (musSnap.hasError) return Center(child: Text('Error: ${musSnap.error}'));
+                if (!musSnap.hasData) return const Center(child: CircularProgressIndicator());
+                final docs = musSnap.data!.docs;
+                if (docs.isEmpty) return const Center(child: Text('No music available'));
+
+                return ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: docs.length,
+                  itemBuilder: (context, i) {
+                    final m = docs[i].data() as Map<String, dynamic>;
+                    final title = m['title'] as String? ?? 'Untitled';
+                    final audioUrl = m['audioUrl'] as String? ?? '';
+                    final storagePath = m['storagePath'] as String? ?? '';
+                    final id = docs[i].id;
+
+                    final selected = audioUrl == currentAudioUrl;
+
+                    return ListTile(
+                      title: Text(title),
+                      subtitle: Text(audioUrl),
+                      trailing: selected ? const Icon(Icons.check) : null,
+                      onTap: () async {
+                        // if there is existing audio assigned, consider leaving it (or deleting in later change)
+                        await _framesRef.doc(widget.frameId).set({
+                          'audioUrl': audioUrl,
+                          'audioStoragePath': storagePath,
+                          'musicId': id,
+                        }, SetOptions(merge: true));
+                        if (!mounted) return;
+                        Navigator.of(context).pop();
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Assigned')));
+                      },
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(c).pop(), child: const Text('Close')),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _player.stop();
+    _player.dispose();
+    super.dispose();
+  }
+}
