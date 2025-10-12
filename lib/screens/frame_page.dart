@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'elements_manager_page.dart';
 
 class FramePage extends StatefulWidget {
   final String frameId;
@@ -132,6 +133,16 @@ class _FramePageState extends State<FramePage> {
                         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Music removed')));
                       },
                       child: const Text('Remove assigned music'),
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.add_box),
+                      label: const Text('Manage elements'),
+                      onPressed: () {
+                        Navigator.of(context).push(MaterialPageRoute(
+                          builder: (_) => ElementsManagerPage(frameId: widget.frameId),
+                        ));
+                      },
                     ),
                   ],
                 ),
