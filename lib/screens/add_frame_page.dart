@@ -107,7 +107,12 @@ class _AddFramePageState extends State<AddFramePage> {
               Container(
                 height: 280,
                 color: Colors.grey[200],
-                child: const Center(child: Text('No image selected')),
+                child: Center(
+                  child: Text(
+                    'No image selected',
+                    style: TextStyle(color: Colors.grey[900]),
+                  ),
+                ),
               ),
             const SizedBox(height: 12),
             ElevatedButton.icon(

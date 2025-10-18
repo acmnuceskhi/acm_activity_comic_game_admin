@@ -36,6 +36,74 @@ class _FramePageState extends State<FramePage> {
     });
   }
 
+  Future<void> _showQuestionPicker(BuildContext context, String frameId) async {
+    final setsRef = FirebaseFirestore.instance
+        .collection('comic_game')
+        .doc('questions')
+        .collection('sets');
+    await showDialog<void>(
+      context: context,
+      builder: (c) {
+        return AlertDialog(
+          title: const Text('Select a question set to assign to this frame'),
+          content: SizedBox(
+            width: double.maxFinite,
+            height: 400,
+            child: StreamBuilder<QuerySnapshot>(
+              stream: setsRef.orderBy('title').snapshots(),
+              builder: (context, snap) {
+                if (snap.hasError)
+                  return Center(child: Text('Error: ${snap.error}'));
+                if (!snap.hasData)
+                  return const Center(child: CircularProgressIndicator());
+                final docs = snap.data!.docs;
+                if (docs.isEmpty)
+                  return const Center(child: Text('No question sets'));
+
+                return ListView.builder(
+                  itemCount: docs.length,
+                  itemBuilder: (context, si) {
+                    final setDoc = docs[si];
+                    final setData = setDoc.data() as Map<String, dynamic>;
+                    final title = setData['title'] as String? ?? 'Untitled';
+                    final questions = (setData['questions'] as List?) ?? [];
+                    return ListTile(
+                      title: Text(title),
+                      subtitle: Text('${questions.length} questions'),
+                      trailing: ElevatedButton.icon(
+                        icon: const Icon(Icons.layers),
+                        label: const Text('Assign set'),
+                        onPressed: () async {
+                          await _framesRef.doc(frameId).set({
+                            'questionSetId': setDoc.id,
+                            'assignedQuestion': FieldValue.delete(),
+                          }, SetOptions(merge: true));
+                          if (!mounted) return;
+                          Navigator.of(context).pop();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Question set assigned to frame'),
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(c).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -65,7 +133,7 @@ class _FramePageState extends State<FramePage> {
                 if (currentImageUrl.isNotEmpty)
                   Image.network(
                     currentImageUrl,
-                    height: 200,
+                    height: MediaQuery.of(context).size.height * 0.4,
                     fit: BoxFit.cover,
                   ),
                 const SizedBox(height: 8),
@@ -110,38 +178,82 @@ class _FramePageState extends State<FramePage> {
                     ),
                   ],
                 ),
-                ListTile(
-                  title: const Text('Assigned music'),
-                  subtitle: Text(
-                    currentAudioUrl.isNotEmpty ? currentAudioUrl : 'None',
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow),
-                        onPressed: currentAudioUrl.isEmpty
-                            ? null
-                            : () async {
-                                if (_isPlaying) {
-                                  await _player.pause();
-                                  setState(() => _isPlaying = false);
-                                } else {
-                                  try {
-                                    await _player.play(
-                                      UrlSource(currentAudioUrl),
-                                    );
-                                    setState(() => _isPlaying = true);
-                                  } catch (e) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Play error: $e')),
-                                    );
-                                  }
-                                }
-                              },
-                      ),
-                    ],
-                  ),
+                Builder(
+                  builder: (context) {
+                    final musicId = data['musicId'] as String?;
+                    if (musicId == null || musicId.isEmpty) {
+                      return Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(
+                          currentAudioUrl.isNotEmpty
+                              ? currentAudioUrl
+                              : 'No music selected.',
+                        ),
+                      );
+                    }
+
+                    return FutureBuilder(
+                      future: _musicRef.doc(musicId).get(),
+                      builder: (ctx, musSnap) {
+                        if (musSnap.hasError)
+                          return Text('Error: ${musSnap.error}');
+                        if (!musSnap.hasData) return const Text('Loading...');
+                        final mdata =
+                            musSnap.data!.data() as Map<String, dynamic>?;
+                        final mTitle = mdata?['title'] as String? ?? 'Untitled';
+                        final mUrl =
+                            mdata?['audioUrl'] as String? ?? currentAudioUrl;
+
+                        return ListTile(
+                          title: Text(
+                            mTitle,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          subtitle: Text(
+                            mUrl,
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: Icon(
+                                  _isPlaying ? Icons.pause : Icons.play_arrow,
+                                ),
+                                onPressed: currentAudioUrl.isEmpty
+                                    ? null
+                                    : () async {
+                                        if (_isPlaying) {
+                                          await _player.pause();
+                                          setState(() => _isPlaying = false);
+                                        } else {
+                                          try {
+                                            await _player.play(
+                                              UrlSource(currentAudioUrl),
+                                            );
+                                            setState(() => _isPlaying = true);
+                                          } catch (e) {
+                                            if (context.mounted) {
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                SnackBar(
+                                                  content: Text(
+                                                    'Play error: $e',
+                                                  ),
+                                                ),
+                                              );
+                                            }
+                                          }
+                                        }
+                                      },
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    );
+                  },
                 ),
                 const SizedBox(height: 8),
                 Padding(
@@ -184,14 +296,94 @@ class _FramePageState extends State<FramePage> {
                           );
                         },
                       ),
-                      const SizedBox(width: 12),
-                      ElevatedButton.icon(
-                        icon: const Icon(Icons.question_mark),
-                        label: const Text('Add Question'),
-                        onPressed: () =>
-                            _showQuestionPicker(context, widget.frameId),
-                      ),
                     ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // Assigned question set card
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                  child: Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Builder(
+                              builder: (context) {
+                                final qSetId = data['questionSetId'] as String?;
+                                if (qSetId == null || qSetId.isEmpty) {
+                                  return const Text('No question set assigned');
+                                }
+                                final setsRef = FirebaseFirestore.instance
+                                    .collection('comic_game')
+                                    .doc('questions')
+                                    .collection('sets');
+                                return FutureBuilder<DocumentSnapshot>(
+                                  future: setsRef.doc(qSetId).get(),
+                                  builder: (ctx, snap) {
+                                    if (snap.hasError)
+                                      return const Text('Error');
+                                    if (!snap.hasData)
+                                      return const Text('Loading...');
+                                    final sdata =
+                                        snap.data!.data()
+                                            as Map<String, dynamic>?;
+                                    final title =
+                                        sdata?['title'] as String? ??
+                                        'Untitled set';
+                                    final questions =
+                                        (sdata?['questions'] as List?) ?? [];
+                                    return Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Assigned question set: $title',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text('${questions.length} questions'),
+                                      ],
+                                    );
+                                  },
+                                );
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              ElevatedButton(
+                                onPressed: () => _showQuestionPicker(
+                                  context,
+                                  widget.frameId,
+                                ),
+                                child: const Text('Replace'),
+                              ),
+                              const SizedBox(height: 6),
+                              TextButton(
+                                onPressed: () async {
+                                  await _removeQuestionSet(widget.frameId);
+                                  if (!mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Question set removed from frame',
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: const Text('Remove'),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -271,72 +463,11 @@ class _FramePageState extends State<FramePage> {
     );
   }
 
-  Future<void> _showQuestionPicker(BuildContext context, String frameId) async {
-    final setsRef = FirebaseFirestore.instance
-        .collection('comic_game')
-        .doc('questions')
-        .collection('sets');
-    await showDialog<void>(
-      context: context,
-      builder: (c) {
-        return AlertDialog(
-          title: const Text('Select a question to add to this frame'),
-          content: SizedBox(
-            width: double.maxFinite,
-            height: 400,
-            child: StreamBuilder<QuerySnapshot>(
-              stream: setsRef.snapshots(),
-              builder: (context, snap) {
-                if (snap.hasError)
-                  return Center(child: Text('Error: ${snap.error}'));
-                if (!snap.hasData)
-                  return const Center(child: CircularProgressIndicator());
-                final docs = snap.data!.docs;
-                if (docs.isEmpty)
-                  return const Center(child: Text('No question sets'));
-
-                return ListView.builder(
-                  itemCount: docs.length,
-                  itemBuilder: (context, si) {
-                    final setDoc = docs[si];
-                    final setData = setDoc.data() as Map<String, dynamic>;
-                    final title = setData['title'] as String? ?? 'Untitled';
-                    final questions = (setData['questions'] as List?) ?? [];
-                    return ListTile(
-                      title: Text(title),
-                      subtitle: Text('${questions.length} questions'),
-                      trailing: ElevatedButton.icon(
-                        icon: const Icon(Icons.layers),
-                        label: const Text('Assign set'),
-                        onPressed: () async {
-                          await _framesRef.doc(frameId).set({
-                            'questionSetId': setDoc.id,
-                            'assignedQuestion': FieldValue.delete(),
-                          }, SetOptions(merge: true));
-                          if (!mounted) return;
-                          Navigator.of(context).pop();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Question set assigned to frame'),
-                            ),
-                          );
-                        },
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(c).pop(),
-              child: const Text('Close'),
-            ),
-          ],
-        );
-      },
-    );
+  Future<void> _removeQuestionSet(String frameId) async {
+    await _framesRef.doc(frameId).set({
+      'questionSetId': FieldValue.delete(),
+      'assignedQuestion': FieldValue.delete(),
+    }, SetOptions(merge: true));
   }
 
   @override

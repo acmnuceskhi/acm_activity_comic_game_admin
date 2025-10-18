@@ -24,6 +24,9 @@ class MyApp extends StatelessWidget {
           primary: Colors.blue[400]!,
           secondary: Colors.blue[900]!,
         ),
+        listTileTheme: ListTileThemeData(
+          shape: RoundedRectangleBorder(side: BorderSide(color: Colors.white)),
+        ),
       ),
       home: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),

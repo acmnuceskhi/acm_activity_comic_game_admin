@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:acm_activity_comic_game_admin/services/storage_service.dart';
+import 'package:acm_activity_comic_game_admin/utils.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -119,7 +120,12 @@ class _AddMusicPageState extends State<AddMusicPage> {
     return Scaffold(
       appBar: AppBar(title: Text(existing ? 'Edit Music' : 'Add Music')),
       body: Padding(
-        padding: const EdgeInsets.all(12.0),
+        padding: EdgeInsets.symmetric(
+          horizontal:
+              MediaQuery.of(context).size.width *
+              (isLandscape(context) ? 0.2 : 0.1),
+          vertical: 16,
+        ),
         child: Column(
           children: [
             TextField(
