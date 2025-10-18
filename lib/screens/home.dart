@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:acm_activity_comic_game_admin/screens/add_frame_page.dart';
 import 'package:acm_activity_comic_game_admin/screens/frame_page.dart';
 import 'package:acm_activity_comic_game_admin/screens/music_manager_page.dart';
+import 'package:acm_activity_comic_game_admin/screens/questions_manager_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -29,12 +31,34 @@ class _HomePageState extends State<HomePage> {
             icon: const Icon(Icons.music_note),
             onPressed: () {
               Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const MusicManagerPage(),
-                ),
+                MaterialPageRoute(builder: (_) => const MusicManagerPage()),
               );
             },
-          )
+          ),
+          IconButton(
+            tooltip: 'Questions Manager',
+            icon: const Icon(Icons.question_answer),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const QuestionsManagerPage()),
+              );
+            },
+          ),
+          IconButton(
+            tooltip: 'Logout',
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              try {
+                await FirebaseAuth.instance.signOut();
+                // return to first route (AuthGate should be mounted at app root)
+                Navigator.of(context).popUntil((r) => r.isFirst);
+              } catch (e) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text('Logout failed: $e')));
+              }
+            },
+          ),
         ],
       ),
       body: StreamBuilder<QuerySnapshot>(
@@ -72,7 +96,11 @@ class _HomePageState extends State<HomePage> {
 
               return InkWell(
                 onTap: () {
-                  Navigator.of(context).push(MaterialPageRoute(builder: (_) => FramePage(frameId: docId)));
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => FramePage(frameId: docId),
+                    ),
+                  );
                 },
                 child: Card(
                   child: Column(

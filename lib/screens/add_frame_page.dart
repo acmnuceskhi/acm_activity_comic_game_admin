@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:acm_activity_comic_game_admin/services/storage_service.dart';
+import 'package:acm_activity_comic_game_admin/utils.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
@@ -87,16 +88,15 @@ class _AddFramePageState extends State<AddFramePage> {
     return Scaffold(
       appBar: AppBar(title: const Text('Add Frame')),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.symmetric(
+          horizontal:
+              MediaQuery.of(context).size.width *
+              (isLandscape(context) ? 0.2 : 0.1),
+          vertical: 16,
+        ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            ElevatedButton.icon(
-              onPressed: _busy ? null : _pickFile,
-              icon: const Icon(Icons.photo_library),
-              label: const Text('Select Image'),
-            ),
-            const SizedBox(height: 12),
             if (_bytes != null) ...[
               Center(
                 child: Image.memory(_bytes!, height: 280, fit: BoxFit.contain),
@@ -109,24 +109,17 @@ class _AddFramePageState extends State<AddFramePage> {
                 color: Colors.grey[200],
                 child: const Center(child: Text('No image selected')),
               ),
-
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              onPressed: _busy ? null : _pickFile,
+              icon: const Icon(Icons.photo_library),
+              label: const Text('Select Image'),
+            ),
             const SizedBox(height: 18),
-            Row(
-              children: [
-                ElevatedButton.icon(
-                  onPressed: _busy ? null : _addFrame,
-                  icon: const Icon(Icons.add),
-                  label: _busy
-                      ? const Text('Adding...')
-                      : const Text('Add Frame'),
-                ),
-                const SizedBox(width: 12),
-                ElevatedButton.icon(
-                  onPressed: null, // non-functioning audio button for now
-                  icon: const Icon(Icons.audiotrack),
-                  label: const Text('Add Audio (TODO)'),
-                ),
-              ],
+            ElevatedButton.icon(
+              onPressed: _busy ? null : _addFrame,
+              icon: const Icon(Icons.add),
+              label: _busy ? const Text('Adding...') : const Text('Add Frame'),
             ),
           ],
         ),

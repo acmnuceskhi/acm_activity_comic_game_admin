@@ -171,7 +171,9 @@ class StorageService {
 
         tx.set(parentDoc, {'lastIndex': nextIndex}, SetOptions(merge: true));
       });
-      debugPrint('StorageService.createMusicDoc: successfully created music doc');
+      debugPrint(
+        'StorageService.createMusicDoc: successfully created music doc',
+      );
     } catch (e, st) {
       debugPrint('StorageService.createMusicDoc: ERROR -> $e\n$st');
       rethrow;

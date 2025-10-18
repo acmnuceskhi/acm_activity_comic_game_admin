@@ -12,7 +12,10 @@ class MusicManagerPage extends StatefulWidget {
 }
 
 class _MusicManagerPageState extends State<MusicManagerPage> {
-  final _musicCol = FirebaseFirestore.instance.collection('comic_game').doc('music').collection('music');
+  final _musicCol = FirebaseFirestore.instance
+      .collection('comic_game')
+      .doc('music')
+      .collection('music');
   final _storage = StorageService();
 
   @override
@@ -22,8 +25,10 @@ class _MusicManagerPageState extends State<MusicManagerPage> {
       body: StreamBuilder<QuerySnapshot>(
         stream: _musicCol.orderBy('index').snapshots(),
         builder: (context, snapshot) {
-          if (snapshot.hasError) return Center(child: Text('Error: ${snapshot.error}'));
-          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+          if (snapshot.hasError)
+            return Center(child: Text('Error: ${snapshot.error}'));
+          if (!snapshot.hasData)
+            return const Center(child: CircularProgressIndicator());
           final docs = snapshot.data!.docs;
           if (docs.isEmpty) return const Center(child: Text('No music added'));
 
@@ -46,14 +51,16 @@ class _MusicManagerPageState extends State<MusicManagerPage> {
                       icon: const Icon(Icons.edit),
                       onPressed: () async {
                         // navigate to add/edit page with existing values
-                        await Navigator.of(context).push(MaterialPageRoute(
-                          builder: (_) => AddMusicPage(
-                            existingId: docId,
-                            existingTitle: title,
-                            existingAudioUrl: audioUrl,
-                            existingStoragePath: storagePath,
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => AddMusicPage(
+                              existingId: docId,
+                              existingTitle: title,
+                              existingAudioUrl: audioUrl,
+                              existingStoragePath: storagePath,
+                            ),
                           ),
-                        ));
+                        );
                       },
                     ),
                     IconButton(
@@ -63,19 +70,34 @@ class _MusicManagerPageState extends State<MusicManagerPage> {
                           context: context,
                           builder: (c) => AlertDialog(
                             title: const Text('Delete music?'),
-                            content: Text('Delete "$title"? This will also remove the audio file.'),
+                            content: Text(
+                              'Delete "$title"? This will also remove the audio file.',
+                            ),
                             actions: [
-                              TextButton(onPressed: () => Navigator.of(c).pop(false), child: const Text('Cancel')),
-                              TextButton(onPressed: () => Navigator.of(c).pop(true), child: const Text('Delete')),
+                              TextButton(
+                                onPressed: () => Navigator.of(c).pop(false),
+                                child: const Text('Cancel'),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.of(c).pop(true),
+                                child: const Text('Delete'),
+                              ),
                             ],
                           ),
                         );
                         if (ok == true) {
                           try {
-                            await _storage.deleteMusicDoc(docId: docId, storagePath: storagePath);
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Deleted')));
+                            await _storage.deleteMusicDoc(
+                              docId: docId,
+                              storagePath: storagePath,
+                            );
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Deleted')),
+                            );
                           } catch (e) {
-                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error deleting: $e')));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Error deleting: $e')),
+                            );
                           }
                         }
                       },
@@ -90,7 +112,9 @@ class _MusicManagerPageState extends State<MusicManagerPage> {
       floatingActionButton: FloatingActionButton(
         child: const Icon(Icons.add),
         onPressed: () async {
-          await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AddMusicPage()));
+          await Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (_) => const AddMusicPage()));
         },
       ),
     );
