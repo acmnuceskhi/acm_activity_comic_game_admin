@@ -128,6 +128,19 @@ class _HomePageState extends State<HomePage> {
                                             imageUrl,
                                             fit: BoxFit.cover,
                                             width: double.infinity,
+                                            loadingBuilder:
+                                                (
+                                                  context,
+                                                  child,
+                                                  loadingProgress,
+                                                ) {
+                                                  if (loadingProgress == null)
+                                                    return child;
+                                                  return const Center(
+                                                    child:
+                                                        CircularProgressIndicator(),
+                                                  );
+                                                },
                                           )
                                         : Container(color: Colors.grey[200]),
                                   ),
