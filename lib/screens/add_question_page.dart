@@ -142,6 +142,7 @@ class _AddQuestionPageState extends State<AddQuestionPage> {
           children: [
             TextField(
               controller: _textCtrl,
+              maxLines: null,
               decoration: const InputDecoration(labelText: 'Question text'),
             ),
             const SizedBox(height: 8),
