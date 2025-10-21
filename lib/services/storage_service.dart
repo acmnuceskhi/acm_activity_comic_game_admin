@@ -132,6 +132,39 @@ class StorageService {
     }
   }
 
+  /// Upload bytes for video files under: /comic_game/backgrounds/<randomId><ext>
+  /// Returns a map with keys: 'storagePath' and 'downloadUrl'.
+  Future<Map<String, String>> uploadTempVideo({
+    required Uint8List bytes,
+    required String filename,
+    void Function(double progress)? onProgress,
+  }) async {
+    debugPrint(
+      'StorageService.uploadTempVideo: start filename=$filename bytes=${bytes.length}',
+    );
+
+    final randomId =
+        '${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}${identityHashCode(Object()).toRadixString(36)}';
+    final ext = _extensionFromFilename(filename);
+    final storagePath = 'comic_game/backgrounds/$randomId$ext';
+
+    final uploadTask = _storage.ref().child(storagePath).putData(bytes);
+
+    try {
+      final snapshot = await uploadTask;
+      final url = await snapshot.ref.getDownloadURL();
+      debugPrint(
+        'StorageService.uploadTempVideo: uploaded -> storagePath=$storagePath downloadUrl=$url',
+      );
+      return {'storagePath': storagePath, 'downloadUrl': url};
+    } catch (e, st) {
+      debugPrint(
+        'StorageService.uploadTempVideo: ERROR uploading to $storagePath -> $e\n$st',
+      );
+      rethrow;
+    }
+  }
+
   /// Create a music document under comic_game/music/music with the provided title and audioUrl.
   /// Stores storagePath as well so it can be cleaned up later. Uses a transaction to increment lastIndex.
   Future<void> createMusicDoc({

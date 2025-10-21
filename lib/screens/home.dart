@@ -1,3 +1,4 @@
+import 'package:acm_activity_comic_game_admin/screens/background_manager_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:acm_activity_comic_game_admin/screens/add_frame_page.dart';
@@ -33,6 +34,17 @@ class _HomePageState extends State<HomePage> {
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const MusicManagerPage()),
+              );
+            },
+          ),
+          IconButton(
+            tooltip: 'Background',
+            icon: const Icon(Icons.wallpaper),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const BackgroundManagerPage(),
+                ),
               );
             },
           ),
