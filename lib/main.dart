@@ -20,9 +20,9 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Comic Game Admin',
       theme: ThemeData(
-        colorScheme: ColorScheme.dark(
-          primary: Colors.blue[400]!,
-          secondary: Colors.blue[900]!,
+        colorScheme: ColorScheme.dark(primary: Colors.yellow[800]!),
+        listTileTheme: ListTileThemeData(
+          shape: RoundedRectangleBorder(side: BorderSide(color: Colors.white)),
         ),
       ),
       home: StreamBuilder<User?>(

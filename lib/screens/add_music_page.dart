@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:acm_activity_comic_game_admin/services/storage_service.dart';
+import 'package:acm_activity_comic_game_admin/utils.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -60,7 +61,9 @@ class _AddMusicPageState extends State<AddMusicPage> {
   Future<void> _save() async {
     final title = _titleCtl.text.trim();
     if (title.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter a title')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Enter a title')));
       return;
     }
 
@@ -70,7 +73,10 @@ class _AddMusicPageState extends State<AddMusicPage> {
       String storagePath = widget.existingStoragePath ?? '';
 
       if (_bytes != null && _filename != null) {
-        final up = await _storage.uploadTempAudio(bytes: _bytes!, filename: _filename!);
+        final up = await _storage.uploadTempAudio(
+          bytes: _bytes!,
+          filename: _filename!,
+        );
         audioUrl = up['downloadUrl']!;
         storagePath = up['storagePath']!;
       }
@@ -88,14 +94,20 @@ class _AddMusicPageState extends State<AddMusicPage> {
           'storagePath': storagePath,
         }, SetOptions(merge: true));
       } else {
-        await _storage.createMusicDoc(title: title, audioUrl: audioUrl, storagePath: storagePath);
+        await _storage.createMusicDoc(
+          title: title,
+          audioUrl: audioUrl,
+          storagePath: storagePath,
+        );
       }
 
       if (!mounted) return;
       Navigator.of(context).pop();
     } catch (e, st) {
       debugPrint('AddMusicPage._save: ERROR -> $e\n$st');
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -103,14 +115,23 @@ class _AddMusicPageState extends State<AddMusicPage> {
 
   @override
   Widget build(BuildContext context) {
-    final existing = widget.existingAudioUrl != null && widget.existingAudioUrl!.isNotEmpty;
+    final existing =
+        widget.existingAudioUrl != null && widget.existingAudioUrl!.isNotEmpty;
     return Scaffold(
       appBar: AppBar(title: Text(existing ? 'Edit Music' : 'Add Music')),
       body: Padding(
-        padding: const EdgeInsets.all(12.0),
+        padding: EdgeInsets.symmetric(
+          horizontal:
+              MediaQuery.of(context).size.width *
+              (isLandscape(context) ? 0.2 : 0.1),
+          vertical: 16,
+        ),
         child: Column(
           children: [
-            TextField(controller: _titleCtl, decoration: const InputDecoration(labelText: 'Title')),
+            TextField(
+              controller: _titleCtl,
+              decoration: const InputDecoration(labelText: 'Title'),
+            ),
             const SizedBox(height: 12),
             Row(
               children: [
@@ -120,7 +141,14 @@ class _AddMusicPageState extends State<AddMusicPage> {
                   label: const Text('Pick audio'),
                 ),
                 const SizedBox(width: 12),
-                Expanded(child: Text(_filename ?? (existing ? 'Using existing audio' : 'No file selected'))),
+                Expanded(
+                  child: Text(
+                    _filename ??
+                        (existing
+                            ? 'Using existing audio'
+                            : 'No file selected'),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 20),

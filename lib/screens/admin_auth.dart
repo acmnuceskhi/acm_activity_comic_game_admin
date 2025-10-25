@@ -1,3 +1,4 @@
+import 'package:acm_activity_comic_game_admin/utils.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -53,7 +54,12 @@ class _AdminAuthPageState extends State<AdminAuthPage> {
     return Scaffold(
       appBar: AppBar(title: const Text('Admin Sign In')),
       body: Padding(
-        padding: const EdgeInsets.all(20.0),
+        padding: EdgeInsets.symmetric(
+          horizontal:
+              MediaQuery.of(context).size.width *
+              (isLandscape(context) ? 0.2 : 0.1),
+          vertical: 16,
+        ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [

@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:acm_activity_comic_game_admin/services/storage_service.dart';
+import 'package:acm_activity_comic_game_admin/utils.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
@@ -12,8 +13,9 @@ class AddFramePage extends StatefulWidget {
 }
 
 class _AddFramePageState extends State<AddFramePage> {
-  Uint8List? _bytes;
-  String? _filename;
+  // Support multiple selected files
+  List<Uint8List> _bytesList = [];
+  List<String> _filenames = [];
   // preview url not required for now
   bool _busy = false;
 
@@ -22,61 +24,62 @@ class _AddFramePageState extends State<AddFramePage> {
   Future<void> _pickFile() async {
     final res = await FilePicker.platform.pickFiles(
       withData: true,
-      allowMultiple: false,
+      allowMultiple: true,
       type: FileType.any,
     );
     if (res == null || res.files.isEmpty) return;
-    final f = res.files.first;
-    if (f.bytes == null) {
+
+    final files = res.files.where((f) => f.bytes != null).toList();
+    if (files.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selected file has no bytes')),
+        const SnackBar(content: Text('Selected files have no bytes')),
       );
       return;
     }
+
     setState(() {
-      _bytes = f.bytes;
-      _filename = f.name;
+      _bytesList = files.map((f) => f.bytes!).toList();
+      _filenames = files.map((f) => f.name).toList();
     });
+
     debugPrint(
-      'AddFramePage._pickFile: selected file name=${_filename} bytes=${_bytes?.length}',
+      'AddFramePage._pickFile: selected ${_filenames.length} files, first=${_filenames.first} bytes=${_bytesList.first.length}',
     );
   }
 
   Future<void> _addFrame() async {
-    if (_bytes == null || _filename == null) {
+    if (_bytesList.isEmpty || _filenames.isEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Pick an image first')));
+      ).showSnackBar(const SnackBar(content: Text('Pick one or more images first')));
       return;
     }
 
     setState(() => _busy = true);
     try {
-      debugPrint(
-        'AddFramePage._addFrame: starting upload filename=$_filename bytes=${_bytes?.length}',
-      );
-      // upload image with random uid in storage
-      final res = await _storage.uploadTempImage(
-        bytes: _bytes!,
-        filename: _filename!,
-      );
-      debugPrint('AddFramePage._addFrame: uploadTempImage returned $res');
-      final downloadUrl = res['downloadUrl'];
-      // create the frame doc
-      await _storage.createFrameDoc(imageUrl: downloadUrl!);
-      debugPrint(
-        'AddFramePage._addFrame: createFrameDoc succeeded for url=$downloadUrl',
-      );
+      debugPrint('AddFramePage._addFrame: starting batch upload of ${_filenames.length} files');
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Frame added')));
+      for (var i = 0; i < _bytesList.length; i++) {
+        final bytes = _bytesList[i];
+        final filename = _filenames[i];
+        debugPrint('Uploading file ${i + 1}/${_filenames.length}: $filename bytes=${bytes.length}');
+
+        final res = await _storage.uploadTempImage(bytes: bytes, filename: filename);
+        debugPrint('uploadTempImage returned $res for $filename');
+        final downloadUrl = res['downloadUrl'];
+        if (downloadUrl == null) {
+          throw Exception('upload did not return downloadUrl for $filename');
+        }
+
+        await _storage.createFrameDoc(imageUrl: downloadUrl);
+        debugPrint('createFrameDoc succeeded for url=$downloadUrl');
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Frames added')));
       Navigator.of(context).pop();
     } catch (e) {
       debugPrint('AddFramePage._addFrame: ERROR -> $e');
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to add frame: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to add frames: $e')));
     } finally {
       setState(() => _busy = false);
     }
@@ -87,46 +90,58 @@ class _AddFramePageState extends State<AddFramePage> {
     return Scaffold(
       appBar: AppBar(title: const Text('Add Frame')),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.symmetric(
+          horizontal:
+              MediaQuery.of(context).size.width *
+              (isLandscape(context) ? 0.2 : 0.1),
+          vertical: 16,
+        ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            ElevatedButton.icon(
-              onPressed: _busy ? null : _pickFile,
-              icon: const Icon(Icons.photo_library),
-              label: const Text('Select Image'),
-            ),
-            const SizedBox(height: 12),
-            if (_bytes != null) ...[
-              Center(
-                child: Image.memory(_bytes!, height: 280, fit: BoxFit.contain),
+            if (_bytesList.isNotEmpty) ...[
+              SizedBox(
+                height: 280,
+                child: GridView.builder(
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    mainAxisSpacing: 6,
+                    crossAxisSpacing: 6,
+                    childAspectRatio: 1,
+                  ),
+                  itemCount: _bytesList.length,
+                  itemBuilder: (context, idx) {
+                    return Image.memory(_bytesList[idx], fit: BoxFit.cover);
+                  },
+                ),
               ),
               const SizedBox(height: 12),
-              Text('File: ${_filename ?? ''}'),
+              Text('Files: ${_filenames.join(', ')}'),
             ] else
               Container(
                 height: 280,
                 color: Colors.grey[200],
-                child: const Center(child: Text('No image selected')),
+                child: Center(
+                  child: Text(
+                    'No image selected',
+                    style: TextStyle(color: Colors.grey[900]),
+                  ),
+                ),
               ),
-
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              onPressed: _busy ? null : _pickFile,
+              icon: const Icon(Icons.photo_library),
+              label: const Text('Select Images'),
+            ),
             const SizedBox(height: 18),
-            Row(
-              children: [
-                ElevatedButton.icon(
-                  onPressed: _busy ? null : _addFrame,
-                  icon: const Icon(Icons.add),
-                  label: _busy
-                      ? const Text('Adding...')
-                      : const Text('Add Frame'),
-                ),
-                const SizedBox(width: 12),
-                ElevatedButton.icon(
-                  onPressed: null, // non-functioning audio button for now
-                  icon: const Icon(Icons.audiotrack),
-                  label: const Text('Add Audio (TODO)'),
-                ),
-              ],
+            ElevatedButton.icon(
+              onPressed: _busy ? null : _addFrame,
+              icon: const Icon(Icons.add),
+              label: _busy
+                  ? const Text('Adding...')
+                  : Text(_filenames.length > 1 ? 'Add Frames' : 'Add Frame'),
             ),
           ],
         ),
