@@ -3,6 +3,7 @@ import 'package:acm_activity_comic_game_admin/utils.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:audioplayers/audioplayers.dart';
 import 'elements_manager_page.dart';
 
@@ -175,6 +176,56 @@ class _FramePageState extends State<FramePage> {
                           );
                         }
                       },
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.download),
+                      label: const Text('Download image'),
+                      onPressed: currentImageUrl.isEmpty
+                          ? null
+                          : () async {
+                              try {
+                                String fileName = 'frame_${widget.frameId}.jpg';
+                                String? path;
+
+                                if (!kIsWeb) {
+                                  // For desktop/mobile, get save location
+                                  path = await FilePicker.platform.saveFile(
+                                    dialogTitle: 'Save frame image',
+                                    fileName: fileName,
+                                    type: FileType.image,
+                                    allowedExtensions: ['jpg', 'jpeg', 'png'],
+                                  );
+                                  if (path == null) return; // User cancelled
+                                }
+
+                                // Download and save the image
+                                final success = await _storage.downloadFile(
+                                  url: currentImageUrl,
+                                  savePath:
+                                      path ??
+                                      fileName, // On web, just pass the filename
+                                );
+
+                                if (!mounted) return;
+                                if (success) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Image downloaded successfully',
+                                      ),
+                                    ),
+                                  );
+                                } else {
+                                  throw Exception('Failed to download image');
+                                }
+                              } catch (e) {
+                                if (!mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Download error: $e')),
+                                );
+                              }
+                            },
                     ),
                   ],
                 ),

@@ -1,8 +1,10 @@
+import 'dart:io';
 import 'dart:typed_data';
+import 'dart:html' as html;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 
 class StorageService {
   final _firestore = FirebaseFirestore.instance;
@@ -238,5 +240,51 @@ class StorageService {
     final idx = name.lastIndexOf('.');
     if (idx == -1) return '';
     return name.substring(idx);
+  }
+
+  /// Downloads a file from a given URL and saves it to the specified path
+  Future<bool> downloadFile({
+    required String url,
+    required String savePath,
+  }) async {
+    try {
+      debugPrint('StorageService.downloadFile: downloading from $url');
+
+      // Get download URL from Firebase Storage reference if it's a storage path
+      String fileUrl = url;
+      if (url.startsWith('comic_game/')) {
+        fileUrl = await _storage.ref().child(url).getDownloadURL();
+      }
+
+      if (kIsWeb) {
+        // Web platform: Download directly using anchor element
+        final ref = _storage.refFromURL(fileUrl);
+        final bytes = await ref.getData();
+        if (bytes == null) return false;
+
+        final blob = html.Blob([bytes]);
+        final anchor = html.AnchorElement()
+          ..href = html.Url.createObjectUrlFromBlob(blob)
+          ..style.display = 'none'
+          ..download = savePath.split('/').last;
+
+        html.document.body?.children.add(anchor);
+        anchor.click();
+
+        html.document.body?.children.remove(anchor);
+        html.Url.revokeObjectUrl(anchor.href!);
+      } else {
+        // Native platforms: Use File API
+        final ref = _storage.refFromURL(fileUrl);
+        final file = File(savePath);
+        await ref.writeToFile(file);
+      }
+
+      debugPrint('StorageService.downloadFile: downloaded successfully');
+      return true;
+    } catch (e, st) {
+      debugPrint('StorageService.downloadFile: ERROR -> $e\n$st');
+      return false;
+    }
   }
 }
